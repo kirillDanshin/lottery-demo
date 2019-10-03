@@ -1,0 +1,33 @@
+---
+INVENTORY:
+  testnet:
+    - http://localhost:7545
+  ropsten:
+    # Replace <YOUR_API_KEY> with your infura api keys
+    - https://ropsten.infura.io/v3/<YOUR_API_KEY>
+
+WALLETS:
+  owner:
+    # replace <YOUR_PRIVATE_KEY> with your ropsten wallet private key
+    privkey: <YOUR_PRIVATE_KEY>
+
+CONTRACTS:
+  lottery-token:
+    name: Lottery
+    sol: contracts/Lottery.sol
+    instances:
+      - &LOT
+        contract: lottery-token
+        # replace 0x0 with your contract address after deployment,
+        # to control your lottery with `award-winner-and-restart`.
+        address: 0x0
+
+WRITE:
+  deploy-lottery-token:
+    wallet: owner
+    instance:
+      contract: lottery-token
+  award-winner-and-restart:
+    wallet: owner
+    instance: *LOT
+    method: awardWinnerAndRestart
