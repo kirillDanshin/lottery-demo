@@ -31,6 +31,10 @@ contract Lottery {
 
     function buyTickets() public payable {
         require(msg.value >= 100 finney, "you can buy tickets starting from 100 finney (0.1 ether)");
+        // if tailElement is defined, then assign the next element
+        if (participants[participantTailElem].addr != address(0x0)) {
+            participants[participantTailElem].next = key(msg.sender);
+        }
         Participant memory p = participants[key(msg.sender)];
         if (p.addr == address(0x0)) {
             participants[key(msg.sender)] = Participant(
@@ -38,14 +42,9 @@ contract Lottery {
                 msg.sender,
                 0
             );
-        }
-        if (participants[participantHeadElem].addr == address(0x0)) {
-            participantHeadElem = key(msg.sender);
-        }
-        if (participants[participantTailElem].addr == address(0x0)) {
+            // tail element should change only if msg.sender is not participating
+            // in current lotteryGen.
             participantTailElem = key(msg.sender);
-        } else {
-            participants[participantTailElem].next = key(msg.sender);
         }
         participants[key(msg.sender)].tickets += uint64(msg.value / 100 finney);
         lotteryHash = keccak256(abi.encodePacked(
@@ -57,6 +56,13 @@ contract Lottery {
             participantHeadElem,
             key(msg.sender)
         ));
+        // if head element is not defined, define it.
+        // we do it here to increase lotteryHash entropy.
+        // if we update it before keccak256 call, then we
+        // would basically get `key(msg.sender)` twice in the end.
+        if (participants[participantHeadElem].addr == address(0x0)) {
+            participantHeadElem = key(msg.sender);
+        }
         lotteryHash = keccak256(abi.encodePacked(lotteryHash));
         contractBalance += msg.value;
         emit TicketsBought(msg.sender, participants[key(msg.sender)].tickets);
@@ -82,9 +88,10 @@ contract Lottery {
     }
 
     function awardWinner() private returns (uint256) {
+        uint256 totalTickets = contractBalance / 100 finney;
+        require(totalTickets > 0, "you must sell a few tickets before rewarding");
         uint256 randomN = uint256(keccak256(abi.encodePacked(msg.sender, blockhash(block.number), lotteryHash, participantHeadElem)));
 
-        uint256 totalTickets = contractBalance / 100 finney;
         uint256 winnerTicket = randomN % totalTickets;
         uint256 processedTickets = 0;
 
